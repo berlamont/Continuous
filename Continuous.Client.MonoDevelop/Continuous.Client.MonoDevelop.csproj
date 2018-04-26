@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\MonoDevelop.Addins.0.3.8\build\net40\MonoDevelop.Addins.props" Condition="Exists('..\packages\MonoDevelop.Addins.0.3.8\build\net40\MonoDevelop.Addins.props')" />
+  <Import Project="..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.props" Condition="Exists('..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -45,15 +45,13 @@
   <Import Project="..\Continuous.Core\Continuous.Core.projitems" Label="Shared" Condition="Exists('..\Continuous.Core\Continuous.Core.projitems')" />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <AddinReference Include="MonoDevelop.Refactoring" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.ComponentModel.Composition" />
+    <None Include="packages.config" />
   </ItemGroup>
-  <Import Project="..\packages\MonoDevelop.Addins.0.3.8\build\net40\MonoDevelop.Addins.targets" Condition="Exists('..\packages\MonoDevelop.Addins.0.3.8\build\net40\MonoDevelop.Addins.targets')" />
+  <ItemGroup>
+    <Reference Include="Mono.CSharp" />
+  </ItemGroup>
+  <Import Project="..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.targets" Condition="Exists('..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.targets')" />
 </Project>
