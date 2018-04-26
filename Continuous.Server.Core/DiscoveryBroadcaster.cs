@@ -10,11 +10,11 @@ namespace Continuous.Server
 {
 	public class DiscoveryBroadcaster
 	{
-		readonly IPEndPoint broadcastEndpoint = new IPEndPoint(IPAddress.Broadcast, Http.DiscoveryBroadcastReceiverPort);
+		readonly IPEndPoint broadcastEndpoint = new IPEndPoint (IPAddress.Broadcast, Http.DiscoveryBroadcastReceiverPort);
 		readonly int httpPort;
 
 		UdpClient client;
-		Timer timer = new Timer(3000);
+		Timer timer = new Timer (3000);
 
 		public DiscoveryBroadcaster (int httpPort = 0)
 		{
@@ -25,12 +25,9 @@ namespace Continuous.Server
 
 		void Timer_Elapsed (object sender, ElapsedEventArgs e)
 		{
-			try
-			{
-				if (client == null)
-				{
-					client = new UdpClient (Http.DiscoveryBroadcastPort)
-					{
+			try {
+				if (client == null) {
+					client = new UdpClient (Http.DiscoveryBroadcastPort) {
 						EnableBroadcast = true
 					};
 				}
@@ -41,9 +38,7 @@ namespace Continuous.Server
 
 				client.Send (bytes, bytes.Length, broadcastEndpoint);
 				//Debug.WriteLine ($"BROADCAST {json}");
-			}
-			catch (Exception ex)
-			{
+			} catch (Exception ex) {
 				Debug.WriteLine ($"FAILED TO BROADCAST ON PORT {Http.DiscoveryBroadcastPort}: {ex}");
 			}
 		}

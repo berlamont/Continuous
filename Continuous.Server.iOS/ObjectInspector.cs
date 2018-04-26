@@ -49,7 +49,7 @@ namespace Continuous.Server
 		{
 			if (data.IsList)
 				return "";
-			
+
 			if (section == 0)
 				return "";
 			if (section == 1)
@@ -71,7 +71,7 @@ namespace Continuous.Server
 		{
 			if (!data.IsList && indexPath.Section == 0) {
 				if (indexPath.Row == 0) {
-					
+
 					var c = tableView.DequeueReusableCell ("TS");
 					if (c == null) {
 						c = new UITableViewCell (UITableViewCellStyle.Default, "TS");
@@ -103,7 +103,7 @@ namespace Continuous.Server
 					Log (ex);
 				}
 				return c;
-			
+
 			} else if ((!data.IsList && indexPath.Section == 2) || (data.IsList && indexPath.Section == 0)) {
 				var c = tableView.DequeueReusableCell ("E");
 				if (c == null) {
@@ -130,7 +130,7 @@ namespace Continuous.Server
 				try {
 					c.DetailTextLabel.TextColor = tableView.TintColor;
 
-					var prop = data.Properties [indexPath.Row];
+					var prop = data.Properties[indexPath.Row];
 					c.TextLabel.Text = prop.Name;
 
 					try {
@@ -165,10 +165,10 @@ namespace Continuous.Server
 			var n = NavigationController;
 			if (n == null)
 				return;
-			
+
 			if (!data.IsList && indexPath.Section == 1) {
 
-				var prop = data.Properties [indexPath.Row];
+				var prop = data.Properties[indexPath.Row];
 				try {
 					var v = prop.Value;
 					var vc = new ObjectInspector (v);
@@ -179,7 +179,7 @@ namespace Continuous.Server
 
 			} else if ((!data.IsList && indexPath.Section == 2) || (data.IsList && indexPath.Section == 0)) {
 
-				var e = data.Elements [indexPath.Row].Value;
+				var e = data.Elements[indexPath.Row].Value;
 				var vc = new ObjectInspector (e);
 
 				n.PushViewController (vc, true);
@@ -207,9 +207,9 @@ namespace Continuous.Server
 			public TestObject ()
 			{
 				ListOfInt = new List<int> { 1, 2, 3, 4 };
-				ArrayOfInt = new [] { 1, 2 };
+				ArrayOfInt = new[] { 1, 2 };
 				Dict = new Dictionary<string, object> {
-					{"Hello", 12} 
+					{"Hello", 12}
 				};
 			}
 		}
@@ -217,7 +217,7 @@ namespace Continuous.Server
 		public TestObjectInspector ()
 			: base (new TestObject ())
 		{
-			
+
 		}
 	}
 }

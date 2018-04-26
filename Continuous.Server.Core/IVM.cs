@@ -6,6 +6,6 @@ namespace Continuous.Server
 {
 	public interface IVM
 	{
-		EvalResult Eval(EvalRequest code, TaskScheduler mainScheduler, CancellationToken token);
+		EvalResult Eval (EvalRequest code, TaskScheduler mainScheduler, CancellationToken token);
 	}
 }

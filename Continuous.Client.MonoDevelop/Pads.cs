@@ -49,8 +49,8 @@ namespace Continuous.Client.XamarinStudio
 		protected ContinuousEnv Env { get { return ContinuousEnv.Shared; } }
 
 		readonly VBox toolbar = new VBox ();
-		readonly HBox toolbar0 = new HBox();
-		readonly HBox toolbar1 = new HBox();
+		readonly HBox toolbar0 = new HBox ();
+		readonly HBox toolbar1 = new HBox ();
 		readonly ScrolledWindow toolbar2 = new ScrolledWindow ();
 		readonly Button runButton = new Button { Label = "Visualize Type" };
 		readonly Button refreshButton = new Button { Label = "Refresh" };
@@ -60,7 +60,7 @@ namespace Continuous.Client.XamarinStudio
 		readonly ComboBoxEntry hostEntry = new ComboBoxEntry ();
 		//readonly Label portLabel = new Label { Text = "Port:" };
 		//readonly Entry portEntry = new Entry { Text = ContinuousEnv.Shared.Port.ToString () };
-		readonly NodeStore dependenciesStore = new NodeStore (typeof(DependencyTreeNode));
+		readonly NodeStore dependenciesStore = new NodeStore (typeof (DependencyTreeNode));
 		readonly NodeView dependenciesView;
 		readonly Label alertLabel = new Label {
 			Justify = Justification.Left,
@@ -185,8 +185,7 @@ namespace Continuous.Client.XamarinStudio
 			hostEntry.TextColumn = 0;
 			var store = new ListStore (typeof (string));
 
-			if (!string.IsNullOrWhiteSpace (active) && !devs.Contains (active))
-			{
+			if (!string.IsNullOrWhiteSpace (active) && !devs.Contains (active)) {
 				store.AppendValues (active);
 			}
 			store.AppendValues (devs);
@@ -197,14 +196,13 @@ namespace Continuous.Client.XamarinStudio
 
 		void Discovery_DevicesChanged (object sender, EventArgs e)
 		{
-			Task.Factory.StartNew (() =>
-			{
+			Task.Factory.StartNew (() => {
 				PopulateHostEntry ();
 			}, CancellationToken.None, TaskCreationOptions.None, mainScheduler);
 		}
 	}
 
-	[Gtk.TreeNode (ListOnly=true)]
+	[Gtk.TreeNode (ListOnly = true)]
 	public class DependencyTreeNode : TreeNode
 	{
 		public DependencyTreeNode (TypeCode type)
@@ -214,10 +212,10 @@ namespace Continuous.Client.XamarinStudio
 			Status = type.CodeChanged ? ("Edit " + timeStr) : "";
 		}
 
-		[Gtk.TreeNodeValue (Column=0)]
+		[Gtk.TreeNodeValue (Column = 0)]
 		public string Name;
 
-		[Gtk.TreeNodeValue (Column=1)]
+		[Gtk.TreeNodeValue (Column = 1)]
 		public string Status;
 	}
 }

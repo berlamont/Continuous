@@ -59,7 +59,7 @@ namespace Continuous.Client.XamarinStudio
 
 			if (config.Platform != "iPhoneSimulator") return;
 
-			var refAsms = project.GetReferencedAssemblies(configSelector).Result;
+			var refAsms = project.GetReferencedAssemblies (configSelector).Result;
 			var refsContinuous =
 				refAsms.Any (x => x.FilePath.FileNameWithoutExtension == "Continuous.Server.iOS");
 
@@ -68,12 +68,9 @@ namespace Continuous.Client.XamarinStudio
 			//
 			// Copy REPL assemblies to app directory
 			//
-			try
-			{
+			try {
 				Swizzle (project, configSelector);
-			}
-			catch
-			{
+			} catch {
 				// Eat the error because I don't know how to bubble it up to the user
 			}
 		}
@@ -94,10 +91,8 @@ namespace Continuous.Client.XamarinStudio
 				Path.GetDirectoryName (mscorlib.Location),
 				"repl");
 
-			foreach (var asm in Directory.EnumerateFiles (targetFrameworkPath, "*.dll"))
-			{
-				foreach (var appAssemblyDir in appAssemblyDirs)
-				{
+			foreach (var asm in Directory.EnumerateFiles (targetFrameworkPath, "*.dll")) {
+				foreach (var appAssemblyDir in appAssemblyDirs) {
 					File.Copy (asm, Path.Combine (appAssemblyDir, Path.GetFileName (asm)), true);
 					var mdb = asm + ".mdb";
 					if (File.Exists (mdb))

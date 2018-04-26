@@ -15,8 +15,8 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Continuous.Client
 {
-    public partial class ContinuousEnv
-    {
+	public partial class ContinuousEnv
+	{
 		static partial void SetSharedPlatformEnvImpl ()
 		{
 			Shared = new MonoDevelopContinuousEnv ();
@@ -27,9 +27,9 @@ namespace Continuous.Client
 	{
 		protected override async Task SetWatchTextAsync (WatchVariable w, List<string> vals)
 		{
-            var doc = IdeApp.Workbench.GetDocument (w.FilePath);
-            if (doc == null)
-                return;
+			var doc = IdeApp.Workbench.GetDocument (w.FilePath);
+			if (doc == null)
+				return;
 			var ed = doc.Editor;
 			if (ed == null || ed.IsReadOnly)
 				return;
@@ -100,24 +100,24 @@ namespace Continuous.Client
 						.ToList ();
 
 				var deps =
-					Root.DescendantNodes()
-					    .OfType<IdentifierNameSyntax>()
-						.Select(n => Model.GetSymbolInfo(n))
-						.Where(s => s.Symbol != null && s.Symbol.Kind == SymbolKind.NamedType)
-						.Select(n => n.Symbol.Name)
-						.Distinct()
-					    .ToList();
+					Root.DescendantNodes ()
+						.OfType<IdentifierNameSyntax> ()
+						.Select (n => Model.GetSymbolInfo (n))
+						.Where (s => s.Symbol != null && s.Symbol.Kind == SymbolKind.NamedType)
+						.Select (n => n.Symbol.Name)
+						.Distinct ()
+						.ToList ();
 
 				var ns =
-					Declaration.Ancestors()
-					           .OfType<NamespaceDeclarationSyntax>()
-							   .Select(n => n.Name.GetText().ToString().Trim())
-							   .FirstOrDefault() ?? "";
+					Declaration.Ancestors ()
+						   .OfType<NamespaceDeclarationSyntax> ()
+							   .Select (n => n.Name.GetText ().ToString ().Trim ())
+							   .FirstOrDefault () ?? "";
 
 				// create an 'instrumented' instance of the document with watch calls
-				var rewriter = new WatchExpressionRewriter(Document.FullPath);
-				var instrumented = rewriter.Visit(Declaration);
-				var instrumentedCode = instrumented.ToString();
+				var rewriter = new WatchExpressionRewriter (Document.FullPath);
+				var instrumented = rewriter.Visit (Declaration);
+				var instrumentedCode = instrumented.ToString ();
 
 				// the rewriter collects the WatchVariable definitions as it walks the tree
 				var watches = rewriter.WatchVariables;
@@ -221,7 +221,7 @@ namespace Continuous.Client
 			if (boundDoc == doc) {
 				return;
 			}
-			if (boundDoc != null) {				
+			if (boundDoc != null) {
 				boundDoc.DocumentParsed -= ActiveDoc_DocumentParsed;
 			}
 			boundDoc = doc;
@@ -247,82 +247,82 @@ namespace Continuous.Client
 
 			return "";
 		}
-    }
+	}
 
 	public class WatchExpressionRewriter : CSharpSyntaxRewriter
 	{
 		private string path;
 
-		public WatchExpressionRewriter(string p)
+		public WatchExpressionRewriter (string p)
 		{
 			path = p;
 		}
 
-		public List<WatchVariable> WatchVariables = new List<WatchVariable>();
+		public List<WatchVariable> WatchVariables = new List<WatchVariable> ();
 
-		public override SyntaxNode VisitExpressionStatement(ExpressionStatementSyntax node)
+		public override SyntaxNode VisitExpressionStatement (ExpressionStatementSyntax node)
 		{
 			// don't handle nodes that aren't assignment or don't have the //= comment
-			if (!(node.Expression is AssignmentExpressionSyntax && HasWatchComment(node)))
+			if (!(node.Expression is AssignmentExpressionSyntax && HasWatchComment (node)))
 				return node;
 
 			var expr = (node.Expression as AssignmentExpressionSyntax).Left;
-			return AddWatchNode(node, expr);
+			return AddWatchNode (node, expr);
 		}
 
-		public override SyntaxNode VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+		public override SyntaxNode VisitLocalDeclarationStatement (LocalDeclarationStatementSyntax node)
 		{
 			// don't handle nodes that don't have the //= comment
-			if (!HasWatchComment(node))
+			if (!HasWatchComment (node))
 				return node;
 
-			var vn = node.Declaration.Variables.First().Identifier.Text;
-			var expr = SyntaxFactory.IdentifierName(vn);
+			var vn = node.Declaration.Variables.First ().Identifier.Text;
+			var expr = SyntaxFactory.IdentifierName (vn);
 
-			return AddWatchNode(node, expr);
+			return AddWatchNode (node, expr);
 		}
 
-		bool HasWatchComment(SyntaxNode node)
+		bool HasWatchComment (SyntaxNode node)
 		{
 			// expect that only valid node types are passed here
 			return
 				node
-					.GetTrailingTrivia()
-					.Any(t => t.Kind() == SyntaxKind.SingleLineCommentTrivia && t.ToString().StartsWith("//="));
+					.GetTrailingTrivia ()
+					.Any (t => t.Kind () == SyntaxKind.SingleLineCommentTrivia && t.ToString ().StartsWith ("//="));
 		}
 
-		SyntaxNode AddWatchNode(StatementSyntax node, ExpressionSyntax expr)
+		SyntaxNode AddWatchNode (StatementSyntax node, ExpressionSyntax expr)
 		{
-			var id = Guid.NewGuid().ToString();
-			var c = node.GetTrailingTrivia().First(t => t.Kind() == SyntaxKind.SingleLineCommentTrivia && t.ToString().StartsWith("//="));
-			var p = c.GetLocation().GetLineSpan().StartLinePosition;
+			var id = Guid.NewGuid ().ToString ();
+			var c = node.GetTrailingTrivia ().First (t => t.Kind () == SyntaxKind.SingleLineCommentTrivia && t.ToString ().StartsWith ("//="));
+			var p = c.GetLocation ().GetLineSpan ().StartLinePosition;
 
 			var wv = new WatchVariable {
 				Id = id,
-				Expression = expr.ToString(),
+				Expression = expr.ToString (),
 				ExplicitExpression = "",
 				FilePath = path,
 				FileLine = p.Line + 1,  // 0-based index
 				FileColumn = p.Character + 1, // 0-based index
 			};
-			WatchVariables.Add(wv);
+			WatchVariables.Add (wv);
 
-			var wi = GetWatchInstrument(id, expr);
+			var wi = GetWatchInstrument (id, expr);
 
 			// creating a block and removing the open/close braces is a bit of a hack but
 			// lets us replace one node with two... 
 			return
 				SyntaxFactory
-					.Block(node, wi)
-					.WithOpenBraceToken(SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken))
-					.WithCloseBraceToken(SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken))
-					.WithTrailingTrivia(SyntaxFactory.EndOfLine("\r\n"));
+					.Block (node, wi)
+					.WithOpenBraceToken (SyntaxFactory.MissingToken (SyntaxKind.OpenBraceToken))
+					.WithCloseBraceToken (SyntaxFactory.MissingToken (SyntaxKind.CloseBraceToken))
+					.WithTrailingTrivia (SyntaxFactory.EndOfLine ("\r\n"));
 		}
 
-		StatementSyntax GetWatchInstrument(string id, ExpressionSyntax expr)
+		StatementSyntax GetWatchInstrument (string id, ExpressionSyntax expr)
 		{
-			return SyntaxFactory.ParseStatement($"try {{ Continuous.Server.WatchStore.Record(\"{id}\", {expr}); }} catch {{ }}");
+			return SyntaxFactory.ParseStatement ($"try {{ Continuous.Server.WatchStore.Record(\"{id}\", {expr}); }} catch {{ }}");
 		}
-	}	
+	}
 }
 #endif

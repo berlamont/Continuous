@@ -12,4 +12,3 @@ namespace Continuous.Client
 		}
 	}
 }
-

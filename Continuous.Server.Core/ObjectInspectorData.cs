@@ -53,26 +53,23 @@ namespace Continuous.Server
 
 				if (val == null) {
 					valStr = "null";
-				}
-				else {
+				} else {
 					var l = val as System.Collections.IList;
 					if (l != null) {
-						valStr = string.Format ("#{0} {1}", l.Count, l.Count > 0 ? l[0].GetType().Name : "");
-					}
-					else {
+						valStr = string.Format ("#{0} {1}", l.Count, l.Count > 0 ? l[0].GetType ().Name : "");
+					} else {
 						var d = val as IDictionary;
 						if (d != null) {
 							var typeStr = "";
 							if (d.Count > 0) {
-								var kv = d.Keys.Cast<object> ().First();
-								var vv = d.Values.Cast<object> ().First();
-								var kt = kv != null ? kv.GetType () : typeof(object);
-								var vt = vv != null ? vv.GetType () : typeof(object);
+								var kv = d.Keys.Cast<object> ().First ();
+								var vv = d.Values.Cast<object> ().First ();
+								var kt = kv != null ? kv.GetType () : typeof (object);
+								var vt = vv != null ? vv.GetType () : typeof (object);
 								typeStr = kt.Name + ": " + vt.Name;
 							}
 							valStr = string.Format ("#{0} {1}", d.Count, typeStr);
-						}
-						else {
+						} else {
 							valStr = val != null ? val.ToString () : "null";
 						}
 					}
@@ -102,7 +99,7 @@ namespace Continuous.Server
 		public ObjectInspectorData (object target)
 		{
 			this.target = target;
-			this.targetType = target != null ? target.GetType () : typeof(object);
+			this.targetType = target != null ? target.GetType () : typeof (object);
 
 			IsList = (target is IList) || (target is IDictionary);
 
@@ -126,8 +123,8 @@ namespace Continuous.Server
 
 				var h = new List<Type> ();
 				h.Add (this.targetType);
-				while (h [h.Count - 1] != typeof(object)) {
-					var bt = h [h.Count - 1].BaseType;
+				while (h[h.Count - 1] != typeof (object)) {
+					var bt = h[h.Count - 1].BaseType;
 					if (bt != null) {
 						h.Add (bt);
 					} else {
@@ -135,8 +132,8 @@ namespace Continuous.Server
 					}
 				}
 				h.Remove (this.targetType);
-				h.Remove (typeof(object));
-				h.Remove (typeof(ValueType));
+				h.Remove (typeof (object));
+				h.Remove (typeof (ValueType));
 				Hierarchy = h.ToArray ();
 			}
 
@@ -160,7 +157,7 @@ namespace Continuous.Server
 						Elements = ie.Cast<object> ().Take (elementMax).Select ((x, i) => new ObjectElement {
 							Title = string.Format ("{0}: {1}", i, x),
 							Value = x,
-						}).ToArray ();					
+						}).ToArray ();
 					} catch (Exception ex) {
 						Log (ex);
 					}
@@ -175,8 +172,7 @@ namespace Continuous.Server
 			if (target == null) {
 				ToStringValue = "null";
 				HashDisplayString = "#0";
-			}
-			else {
+			} else {
 				try {
 					ToStringValue = target.ToString ();
 				} catch (Exception ex) {

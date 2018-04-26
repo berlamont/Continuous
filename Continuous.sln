@@ -163,4 +163,30 @@ Global
 		{9C9C23C3-8F0F-4B48-B394-0AAC30B4173F} = {E41C02EA-3A84-402F-A57C-1EE1EB8CC7A4}
 		{C7F96A0E-87C8-4FCB-8065-C812FB018E5A} = {E41C02EA-3A84-402F-A57C-1EE1EB8CC7A4}
 	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = PrefixedHierarchical
+		$0.TextStylePolicy = $2
+		$2.scope = text/x-csharp
+		$2.EolMarker = Unix
+		$0.CSharpFormattingPolicy = $3
+		$3.NewLinesForBracesInProperties = False
+		$3.NewLinesForBracesInAccessors = False
+		$3.NewLinesForBracesInAnonymousMethods = False
+		$3.NewLinesForBracesInControlBlocks = False
+		$3.NewLinesForBracesInAnonymousTypes = False
+		$3.NewLinesForBracesInObjectCollectionArrayInitializers = False
+		$3.NewLinesForBracesInLambdaExpressionBody = False
+		$3.NewLineForElse = False
+		$3.NewLineForCatch = False
+		$3.NewLineForFinally = False
+		$3.NewLineForMembersInObjectInit = False
+		$3.NewLineForMembersInAnonymousTypes = False
+		$3.NewLineForClausesInQuery = False
+		$3.scope = text/x-csharp
+		$3.SpacingAfterMethodDeclarationName = True
+		$3.SpaceAfterMethodCallName = True
+		$0.StandardHeader = $4
+	EndGlobalSection
 EndGlobal

@@ -21,8 +21,7 @@ namespace Continuous.Server
 		public EvalResult Eval (EvalRequest code, TaskScheduler mainScheduler, CancellationToken token)
 		{
 			var r = new EvalResult ();
-			Task.Factory.StartNew (() =>
-			{
+			Task.Factory.StartNew (() => {
 				r = EvalOnMainThread (code, token);
 			}, token, TaskCreationOptions.None, mainScheduler).Wait ();
 			return r;
@@ -45,12 +44,10 @@ namespace Continuous.Server
 				sw.Start ();
 
 				try {
-					if (!string.IsNullOrEmpty (code.Declarations))
-					{
+					if (!string.IsNullOrEmpty (code.Declarations)) {
 						eval.Evaluate (code.Declarations, out result, out hasResult);
 					}
-					if (!string.IsNullOrEmpty (code.ValueExpression))
-					{
+					if (!string.IsNullOrEmpty (code.ValueExpression)) {
 						eval.Evaluate (code.ValueExpression, out result, out hasResult);
 					}
 				} catch (InternalErrorException) {
@@ -76,7 +73,7 @@ namespace Continuous.Server
 			};
 		}
 
-		void InitIfNeeded()
+		void InitIfNeeded ()
 		{
 			if (eval == null) {
 
@@ -125,7 +122,7 @@ namespace Continuous.Server
 			//
 			var name = a.GetName ().Name;
 			if (name == "mscorlib" || name == "System" || name == "System.Core" ||
-			    name == "Xamarin.Interactive" || name == "Xamarin.Interactive.iOS")
+				name == "Xamarin.Interactive" || name == "Xamarin.Interactive.iOS")
 				return;
 
 			//
@@ -136,16 +133,16 @@ namespace Continuous.Server
 
 		void Log (string format, params object[] args)
 		{
-			#if DEBUG
+#if DEBUG
 			Log (string.Format (format, args));
-			#endif
+#endif
 		}
 
 		void Log (string msg)
 		{
-			#if DEBUG
+#if DEBUG
 			System.Diagnostics.Debug.WriteLine (msg);
-			#endif
+#endif
 		}
 
 		class Printer : ReportPrinter

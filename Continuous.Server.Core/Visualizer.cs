@@ -28,16 +28,16 @@ namespace Continuous.Server
 
 		void Log (string format, params object[] args)
 		{
-			#if DEBUG
+#if DEBUG
 			Log (string.Format (format, args));
-			#endif
+#endif
 		}
 
 		void Log (string msg)
 		{
-			#if DEBUG
+#if DEBUG
 			System.Diagnostics.Debug.WriteLine (msg);
-			#endif
+#endif
 		}
 	}
 

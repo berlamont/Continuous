@@ -16,7 +16,7 @@ namespace Continuous.Server
 		partial void PlatformVisualize (EvalResult resp)
 		{
 			var val = resp.Result;
-			var ty = val != null ? val.GetType () : typeof(object);
+			var ty = val != null ? val.GetType () : typeof (object);
 
 			Log ("{0} value = {1}", ty.FullName, val);
 

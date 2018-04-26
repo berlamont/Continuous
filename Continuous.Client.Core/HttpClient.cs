@@ -22,7 +22,7 @@ namespace Continuous.Client
 			client = new WebClient ();
 		}
 
-		public Uri BaseUrl {  get { return baseUrl; } }
+		public Uri BaseUrl { get { return baseUrl; } }
 
 		public async Task<EvalResponse> VisualizeAsync (string declarations, string valueExpression)
 		{
@@ -42,7 +42,7 @@ namespace Continuous.Client
 
 		public async Task<WatchValuesResponse> WatchChangesAsync (long version)
 		{
-//			Console.WriteLine ("WC " + version);
+			//			Console.WriteLine ("WC " + version);
 
 			var req = new WatchChangesRequest { Version = version };
 

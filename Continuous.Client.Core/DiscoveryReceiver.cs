@@ -13,7 +13,7 @@ namespace Continuous.Client
 		readonly UdpClient listener;
 
 		readonly Dictionary<string, DiscoveryBroadcast> devices =
-			new Dictionary<string, DiscoveryBroadcast>();
+			new Dictionary<string, DiscoveryBroadcast> ();
 
 		Thread thread;
 		bool running = true;
@@ -22,28 +22,21 @@ namespace Continuous.Client
 
 		public DiscoveryReceiver ()
 		{
-			try
-			{
+			try {
 				listener = new UdpClient (Http.DiscoveryBroadcastReceiverPort, AddressFamily.InterNetwork);
-			}
-			catch (Exception ex)
-			{
+			} catch (Exception ex) {
 				Debug.WriteLine ("Continuous: Failed to listen: " + ex);
 				listener = null;
 			}
-			if (listener != null)
-			{
+			if (listener != null) {
 				thread = new Thread (Run);
 				thread.Start ();
 			}
 		}
 
-		public string[] Devices
-		{
-			get
-			{
-				lock (devices)
-				{
+		public string[] Devices {
+			get {
+				lock (devices) {
 					return devices.Keys.ToArray ();
 				}
 			}
@@ -51,11 +44,9 @@ namespace Continuous.Client
 
 		public string Resolve (string device)
 		{
-			lock (devices)
-			{
+			lock (devices) {
 				DiscoveryBroadcast b;
-				if (devices.TryGetValue (device, out b) && b.Addresses.Length > 0)
-				{
+				if (devices.TryGetValue (device, out b) && b.Addresses.Length > 0) {
 					return b.Addresses[0].Address;
 				}
 				return device;
@@ -70,14 +61,10 @@ namespace Continuous.Client
 
 		void Run ()
 		{
-			while (running)
-			{
-				try
-				{
+			while (running) {
+				try {
 					Listen ();
-				}
-				catch (Exception ex)
-				{
+				} catch (Exception ex) {
 					Debug.WriteLine ("DISCOVERY RECEIVE FAILED " + ex);
 				}
 			}
@@ -85,7 +72,7 @@ namespace Continuous.Client
 
 		void Listen ()
 		{
-			var broadcastEndpoint = new IPEndPoint(IPAddress.Any, Http.DiscoveryBroadcastReceiverPort);
+			var broadcastEndpoint = new IPEndPoint (IPAddress.Any, Http.DiscoveryBroadcastReceiverPort);
 
 			var bytes = listener.Receive (ref broadcastEndpoint);
 
@@ -94,26 +81,20 @@ namespace Continuous.Client
 			var newBroadcast = Newtonsoft.Json.JsonConvert.DeserializeObject<DiscoveryBroadcast> (json);
 
 			bool changed = false;
-			lock (devices)
-			{
+			lock (devices) {
 				var id = newBroadcast.Id;
 				DiscoveryBroadcast oldBroadcast;
-				if (devices.TryGetValue (id, out oldBroadcast))
-				{
-					if (!oldBroadcast.Equals (newBroadcast))
-					{
+				if (devices.TryGetValue (id, out oldBroadcast)) {
+					if (!oldBroadcast.Equals (newBroadcast)) {
 						changed = true;
 						devices[id] = newBroadcast;
 					}
-				}
-				else
-				{
+				} else {
 					changed = true;
 					devices[id] = newBroadcast;
 				}
 			}
-			if (changed)
-			{
+			if (changed) {
 				DevicesChanged?.Invoke (this, EventArgs.Empty);
 			}
 		}

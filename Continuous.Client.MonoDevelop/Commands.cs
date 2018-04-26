@@ -17,7 +17,7 @@ namespace Continuous.Client.XamarinStudio
 	}
 
 	public class VisualizeClassHandler : ContinuousCommandHandler
-	{		
+	{
 		protected override async void Run ()
 		{
 			base.Run ();
@@ -35,7 +35,7 @@ namespace Continuous.Client.XamarinStudio
 	}
 
 	public class StopVisualizingClassHandler : ContinuousCommandHandler
-	{		
+	{
 		protected override async void Run ()
 		{
 			base.Run ();
@@ -51,8 +51,7 @@ namespace Continuous.Client.XamarinStudio
 			if (string.IsNullOrWhiteSpace (t)) {
 				info.Text = "Stop Visualizing Class";
 				info.Enabled = false;
-			}
-			else {
+			} else {
 				info.Text = "Stop Visualizing " + t;
 				info.Enabled = true;
 			}

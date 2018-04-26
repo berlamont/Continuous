@@ -4,22 +4,22 @@ using System.Text;
 
 namespace Continuous.Client
 {
-    public abstract class TypeDecl
-    {
-        public DocumentRef Document { get; set; }
-        public abstract string Name { get; }
-        public abstract TextLoc StartLocation { get; }
-        public abstract TextLoc EndLocation { get; }
-        public abstract void SetTypeCode ();
-    }
+	public abstract class TypeDecl
+	{
+		public DocumentRef Document { get; set; }
+		public abstract string Name { get; }
+		public abstract TextLoc StartLocation { get; }
+		public abstract TextLoc EndLocation { get; }
+		public abstract void SetTypeCode ();
+	}
 
-    public struct TextLoc
-    {
+	public struct TextLoc
+	{
 		public const int MinLine = 1;
 		public const int MinColumn = 1;
 
-        public int Line;
-        public int Column;
+		public int Line;
+		public int Column;
 
 		public TextLoc (int line = MinLine, int column = MinColumn)
 		{

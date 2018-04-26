@@ -27,7 +27,7 @@ namespace Continuous.Server
 		partial void PlatformVisualize (EvalResult res)
 		{
 			var val = res.Result;
-			var ty = val != null ? val.GetType () : typeof(object);
+			var ty = val != null ? val.GetType () : typeof (object);
 			Log ("{0} value = {1}", ty.FullName, val);
 
 			ShowViewerAsync (GetViewer (res.Result, true)).ContinueWith (t => {
@@ -42,7 +42,7 @@ namespace Continuous.Server
 			var vc = value as UIViewController;
 			if (vc != null)
 				return vc;
-			
+
 			var sv = GetSpecialView (value);
 
 			vc = sv as UIViewController;
@@ -58,7 +58,7 @@ namespace Continuous.Server
 			}
 
 			if (createInspector) {
-				vc = new UINavigationController (new ObjectInspector(value));
+				vc = new UINavigationController (new ObjectInspector (value));
 				return vc;
 			}
 
@@ -77,9 +77,8 @@ namespace Continuous.Server
 				return;
 
 			var pvc = vc;
-			if (CanBeInNav(vc))
-			{
-				var nc = new UINavigationController(vc);
+			if (CanBeInNav (vc)) {
+				var nc = new UINavigationController (vc);
 				nc.NavigationBarHidden = true;
 				pvc = nc;
 			}
@@ -88,33 +87,29 @@ namespace Continuous.Server
 			// Try to just swap out the root VC if we've already presented
 			//
 			var needsPresent = false;
-			if (presentedVC != null && rootVC.PresentedViewController == presentedVC)
-			{
+			if (presentedVC != null && rootVC.PresentedViewController == presentedVC) {
 				//
 				// Remove old stuff
 				//
 				var oldChildren = presentedVC.ChildViewControllers;
-				foreach (var c in oldChildren)
-				{
-					c.ViewWillDisappear(false);
-					c.RemoveFromParentViewController();
-					c.View.RemoveFromSuperview();
-					c.ViewDidDisappear(false);
+				foreach (var c in oldChildren) {
+					c.ViewWillDisappear (false);
+					c.RemoveFromParentViewController ();
+					c.View.RemoveFromSuperview ();
+					c.ViewDidDisappear (false);
 				}
-			}
-			else
-			{
-				presentedVC = new UIViewController();
+			} else {
+				presentedVC = new UIViewController ();
 				needsPresent = true;
 			}
 
 			pvc.View.Frame = presentedVC.View.Bounds;
 			pvc.View.AutoresizingMask = UIViewAutoresizing.FlexibleDimensions;
 
-			pvc.ViewWillAppear(false);
-			presentedVC.View.AddSubview(pvc.View);
-			presentedVC.AddChildViewController(pvc);
-			pvc.ViewDidAppear(false);
+			pvc.ViewWillAppear (false);
+			presentedVC.View.AddSubview (pvc.View);
+			presentedVC.AddChildViewController (pvc);
+			pvc.ViewDidAppear (false);
 
 			if (needsPresent) {
 				//
@@ -122,13 +117,12 @@ namespace Continuous.Server
 				//
 				var animate = true;
 
-				if (rootVC.PresentedViewController != null)
-				{
-					await rootVC.DismissViewControllerAsync(false);
+				if (rootVC.PresentedViewController != null) {
+					await rootVC.DismissViewControllerAsync (false);
 					animate = false;
 				}
 
-				await rootVC.PresentViewControllerAsync(presentedVC, animate);
+				await rootVC.PresentViewControllerAsync (presentedVC, animate);
 			}
 		}
 
@@ -156,14 +150,14 @@ namespace Continuous.Server
 		{
 			if (type == null)
 				return null;
-			
+
 			TypeVisualizer v;
 			if (typeVisualizers.TryGetValue (type.FullName, out v)) {
 				if (v != null)
 					return v;
 			}
 
-			if (type == typeof(object))
+			if (type == typeof (object))
 				return null;
 
 			return FindVisualizer (type.BaseType);
@@ -193,8 +187,7 @@ namespace Continuous.Server
 			//
 			// Is there a window? If so, show that
 			//
-			if (value.Window != null)
-			{
+			if (value.Window != null) {
 				return GetView (value.Window);
 			}
 
@@ -202,22 +195,15 @@ namespace Continuous.Server
 			// What if we fake run the life cycle?
 			//
 			var launchOptions = new Foundation.NSDictionary ();
-			try
-			{
+			try {
 				value.WillFinishLaunching (UIApplication.SharedApplication, launchOptions);
+			} catch (Exception) {
 			}
-			catch (Exception)
-			{
-			}
-			try
-			{
+			try {
 				value.FinishedLaunching (UIApplication.SharedApplication, launchOptions);
+			} catch (Exception) {
 			}
-			catch (Exception)
-			{
-			}
-			if (value.Window != null)
-			{
+			if (value.Window != null) {
 				return GetView (value.Window);
 			}
 
@@ -229,13 +215,11 @@ namespace Continuous.Server
 
 		public virtual object GetView (UIWindow value)
 		{
-			if (value.IsKeyWindow)
-			{
+			if (value.IsKeyWindow) {
 				value.ResignKeyWindow ();
 			}
 			var root = value.RootViewController;
-			if (root != null)
-			{
+			if (root != null) {
 				// Replace the root so we can display it again
 				var tempvc = new UIViewController ();
 				value.RootViewController = tempvc;
@@ -297,8 +281,8 @@ namespace Continuous.Server
 			var layout = new UICollectionViewFlowLayout ();
 			var bounds = UIScreen.MainScreen.Bounds;
 			var collectionView = new UICollectionView (
-				                     bounds,
-				                     layout);
+									 bounds,
+									 layout);
 			layout.ItemSize = new CGSize (bounds.Width / 3, bounds.Width / 4);
 			collectionView.RegisterClassForCell (typeof (HostCell), "C");
 			collectionView.DataSource = new SingleCollectionViewCellDataSource (value);
@@ -344,16 +328,16 @@ namespace Continuous.Server
 			}
 		}
 
-		public virtual System.Reflection.Assembly GetXamarinCoreAsm()
+		public virtual System.Reflection.Assembly GetXamarinCoreAsm ()
 		{
-			var asms = AppDomain.CurrentDomain.GetAssemblies();
-			return asms.First(x => x.GetName().Name == "Xamarin.Forms.Core");
+			var asms = AppDomain.CurrentDomain.GetAssemblies ();
+			return asms.First (x => x.GetName ().Name == "Xamarin.Forms.Core");
 		}
 
 		public virtual System.Reflection.Assembly GetXamarinPlatformAsm ()
 		{
-			var asms = AppDomain.CurrentDomain.GetAssemblies();
-			return asms.First(x => x.GetName().Name == "Xamarin.Forms.Platform.iOS");
+			var asms = AppDomain.CurrentDomain.GetAssemblies ();
+			return asms.First (x => x.GetName ().Name == "Xamarin.Forms.Platform.iOS");
 		}
 
 		public virtual UIViewController GetFormsPage (object pageObj)
@@ -363,18 +347,18 @@ namespace Continuous.Server
 			// Create the VC
 			var pagex = platasm.GetType ("Xamarin.Forms.PageExtensions");
 			var cvc = pagex.GetMethod ("CreateViewController");
-			var vc = (UIViewController)cvc.Invoke (null, new[]{ pageObj });
+			var vc = (UIViewController)cvc.Invoke (null, new[] { pageObj });
 
 			return vc;
 		}
 
 		public virtual UIViewController GetFormsView (object viewObj)
 		{
-			var xamasm = GetXamarinCoreAsm();
+			var xamasm = GetXamarinCoreAsm ();
 
 			// Create a ContentPage to hold this view
-			var page = xamasm.GetType("Xamarin.Forms.ContentPage");
-			var pageObj = Activator.CreateInstance(page, viewObj);
+			var page = xamasm.GetType ("Xamarin.Forms.ContentPage");
+			var pageObj = Activator.CreateInstance (page, viewObj);
 
 			return GetFormsPage (pageObj);
 		}

@@ -9,32 +9,30 @@ namespace Continuous.Server
 {
 	public partial class Visualizer
 	{
-		partial void PlatformStopVisualizing()
+		partial void PlatformStopVisualizing ()
 		{
 		}
 
-		partial void PlatformVisualize(EvalResult res)
+		partial void PlatformVisualize (EvalResult res)
 		{
 		}
 
-		public NSViewController GetViewer(object value, bool createInspector)
+		public NSViewController GetViewer (object value, bool createInspector)
 		{
 			var vc = value as NSViewController;
 			if (vc != null)
 				return vc;
 
-			var sv = GetSpecialView(value);
+			var sv = GetSpecialView (value);
 
 			vc = sv as NSViewController;
-			if (vc != null && vc.ParentViewController == null)
-			{
+			if (vc != null && vc.ParentViewController == null) {
 				return vc;
 			}
 
 			var v = sv as NSView;
-			if (v != null && v.Superview == null)
-			{
-				vc = new NSViewController();
+			if (v != null && v.Superview == null) {
+				vc = new NSViewController ();
 				vc.View = v;
 				return vc;
 			}
@@ -42,46 +40,42 @@ namespace Continuous.Server
 			return null;
 		}
 
-		async Task ShowViewerAsync(NSViewController vc)
+		async Task ShowViewerAsync (NSViewController vc)
 		{
 		}
 
-		object GetSpecialView(object obj)
+		object GetSpecialView (object obj)
 		{
 			if (obj == null)
 				return null;
 
-			var v = FindVisualizer(obj.GetType());
-			if (v != null)
-			{
-				return v(obj);
-			}
-			else
-			{
+			var v = FindVisualizer (obj.GetType ());
+			if (v != null) {
+				return v (obj);
+			} else {
 				return null;
 			}
 		}
 
-		delegate object TypeVisualizer(object value);
+		delegate object TypeVisualizer (object value);
 
-		TypeVisualizer FindVisualizer(Type type)
+		TypeVisualizer FindVisualizer (Type type)
 		{
 			if (type == null)
 				return null;
 
 			TypeVisualizer v;
-			if (typeVisualizers.TryGetValue(type.FullName, out v))
-			{
+			if (typeVisualizers.TryGetValue (type.FullName, out v)) {
 				return v;
 			}
 
-			if (type == typeof(object))
+			if (type == typeof (object))
 				return null;
 
-			return FindVisualizer(type.BaseType);
+			return FindVisualizer (type.BaseType);
 		}
 
-		partial void PlatformInitialize()
+		partial void PlatformInitialize ()
 		{
 			typeVisualizers = new Dictionary<string, TypeVisualizer> {
 				{ typeof(NSView).FullName, o => GetView ((NSView)o) },
@@ -92,56 +86,56 @@ namespace Continuous.Server
 				{ "Xamarin.Forms.View", GetFormsView },
 			};
 		}
-		Dictionary<string, TypeVisualizer> typeVisualizers = new Dictionary<string, TypeVisualizer>();
+		Dictionary<string, TypeVisualizer> typeVisualizers = new Dictionary<string, TypeVisualizer> ();
 
-		public virtual NSView GetView(NSView value)
+		public virtual NSView GetView (NSView value)
 		{
 			return value;
 		}
 
-		public virtual NSView GetView(NSImage value)
+		public virtual NSView GetView (NSImage value)
 		{
 			return new NSImageView { Image = value };
 		}
 
-		public virtual NSView GetView(string value)
+		public virtual NSView GetView (string value)
 		{
 			return new NSTextView { Value = value };
 		}
 
-		public virtual System.Reflection.Assembly GetXamarinCoreAsm()
+		public virtual System.Reflection.Assembly GetXamarinCoreAsm ()
 		{
-			var asms = AppDomain.CurrentDomain.GetAssemblies();
-			return asms.First(x => x.GetName().Name == "Xamarin.Forms.Core");
+			var asms = AppDomain.CurrentDomain.GetAssemblies ();
+			return asms.First (x => x.GetName ().Name == "Xamarin.Forms.Core");
 		}
 
-		public virtual System.Reflection.Assembly GetXamarinPlatformAsm()
+		public virtual System.Reflection.Assembly GetXamarinPlatformAsm ()
 		{
-			var asms = AppDomain.CurrentDomain.GetAssemblies();
-			return asms.First(x => x.GetName().Name == "Xamarin.Forms.Platform.iOS");
+			var asms = AppDomain.CurrentDomain.GetAssemblies ();
+			return asms.First (x => x.GetName ().Name == "Xamarin.Forms.Platform.iOS");
 		}
 
-		public virtual NSViewController GetFormsPage(object pageObj)
+		public virtual NSViewController GetFormsPage (object pageObj)
 		{
-			var platasm = GetXamarinPlatformAsm();
+			var platasm = GetXamarinPlatformAsm ();
 
 			// Create the VC
-			var pagex = platasm.GetType("Xamarin.Forms.PageExtensions");
-			var cvc = pagex.GetMethod("CreateViewController");
-			var vc = (NSViewController)cvc.Invoke(null, new[] { pageObj });
+			var pagex = platasm.GetType ("Xamarin.Forms.PageExtensions");
+			var cvc = pagex.GetMethod ("CreateViewController");
+			var vc = (NSViewController)cvc.Invoke (null, new[] { pageObj });
 
 			return vc;
 		}
 
-		public virtual NSViewController GetFormsView(object viewObj)
+		public virtual NSViewController GetFormsView (object viewObj)
 		{
-			var xamasm = GetXamarinCoreAsm();
+			var xamasm = GetXamarinCoreAsm ();
 
 			// Create a ContentPage to hold this view
-			var page = xamasm.GetType("Xamarin.Forms.ContentPage");
-			var pageObj = Activator.CreateInstance(page, viewObj);
+			var page = xamasm.GetType ("Xamarin.Forms.ContentPage");
+			var pageObj = Activator.CreateInstance (page, viewObj);
 
-			return GetFormsPage(pageObj);
+			return GetFormsPage (pageObj);
 		}
 	}
 }

@@ -18,8 +18,8 @@ namespace Continuous.Client
 		public readonly string CacheKey;
 		public LinkedCode (string declarations, string valueExpression, TypeCode[] types, TypeCode mainType)
 		{
-			Declarations = declarations??"";
-			ValueExpression = valueExpression??"";
+			Declarations = declarations ?? "";
+			ValueExpression = valueExpression ?? "";
 			Types = types;
 
 			CacheKey = mainType.UsingsAndCode + string.Join ("", types.Select (x => x.UsingsAndCode));
@@ -72,7 +72,7 @@ namespace Continuous.Client
 		}
 
 		public static TypeCode Get (string name)
-		{			
+		{
 			var key = name;
 			TypeCode ci;
 			if (infos.TryGetValue (key, out ci)) {
@@ -82,7 +82,7 @@ namespace Continuous.Client
 			ci = new TypeCode {
 				Name = name,
 			};
-			infos [key] = ci;
+			infos[key] = ci;
 			return ci;
 		}
 
@@ -201,8 +201,7 @@ namespace Continuous.Client
 						var renamedCode = rename (x.Code);
 						if (x.HasNamespace) {
 							return "namespace " + x.FullNamespace + "{" + us + "\n" + renamedCode + "}";
-						}
-						else {
+						} else {
 							return us + "\n" + renamedCode;
 						}
 					})),

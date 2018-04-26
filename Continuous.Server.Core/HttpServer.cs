@@ -24,7 +24,7 @@ namespace Continuous.Server
 		{
 			this.port = port;
 			this.visualizer = visualizer ?? new Visualizer (context);
-			this.vm = vm ?? (new VM());
+			this.vm = vm ?? (new VM ());
 			this.broadcaster = discoverable ? new DiscoveryBroadcaster () : null;
 		}
 
@@ -59,15 +59,15 @@ namespace Continuous.Server
 			});
 		}
 
-        partial void GrantServerPermission (string url);
+		partial void GrantServerPermission (string url);
 
 		// Analysis disable once FunctionNeverReturns
 		async void Loop ()
 		{
-			for (;;) {
+			for (; ; ) {
 				var c = await listener.GetContextAsync ().ConfigureAwait (false);
 				try {
-					HandleRequest (c);					
+					HandleRequest (c);
 				} catch (Exception ex) {
 					Log (ex, "HandleRequest");
 				}
@@ -100,11 +100,10 @@ namespace Continuous.Server
 					} catch (Exception ex) {
 						Log (ex, "/stopVisualizing");
 					}
-				}
-				else {
+				} else {
 					var reqStr = await new StreamReader (c.Request.InputStream, Encoding.UTF8).ReadToEndAsync ().ConfigureAwait (false);
 
-//					Log (reqStr);
+					//					Log (reqStr);
 
 					var req = JsonConvert.DeserializeObject<EvalRequest> (reqStr);
 
@@ -115,17 +114,14 @@ namespace Continuous.Server
 						var r = new EvalResult ();
 						try {
 							r = vm.Eval (req, mainScheduler, token);
-						}
-						catch (Exception ex) {
+						} catch (Exception ex) {
 							Log (ex, "vm.Eval");
 						}
 						try {
-							Task.Factory.StartNew (() =>
-							{
+							Task.Factory.StartNew (() => {
 								Visualize (r);
 							}, token, TaskCreationOptions.None, mainScheduler).Wait ();
-						}
-						catch (Exception ex) {
+						} catch (Exception ex) {
 							Log (ex, "Visualize");
 						}
 						var response = new EvalResponse {
@@ -185,8 +181,8 @@ namespace Continuous.Server
 			}
 			try {
 				Log ("Continuous.Visualize: {0}", res.Result);
-			// Analysis disable once EmptyGeneralCatchClause
-			} catch (Exception) {				
+				// Analysis disable once EmptyGeneralCatchClause
+			} catch (Exception) {
 			}
 			visualizer.Visualize (res);
 		}
@@ -204,9 +200,9 @@ namespace Continuous.Server
 
 		void Log (string msg)
 		{
-			#if DEBUG
+#if DEBUG
 			Console.WriteLine (msg);
-			#endif
+#endif
 		}
 	}
 }

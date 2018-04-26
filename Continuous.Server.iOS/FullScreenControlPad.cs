@@ -15,7 +15,7 @@ namespace Continuous.Server.iOS
 		readonly UIButton dismissButton = UIButton.FromType (UIButtonType.RoundedRect);
 
 		public FullScreenControlPad ()
-			: base(new CGRect(new CGPoint (0, 0), defaultSize))
+			: base (new CGRect (new CGPoint (0, 0), defaultSize))
 		{
 			BackgroundColor = UIColor.FromWhiteAlpha (0.0f, 0.5f);
 			ClipsToBounds = true;
@@ -48,7 +48,7 @@ namespace Continuous.Server.iOS
 			var defs = NSUserDefaults.StandardUserDefaults;
 			var x = defs.FloatForKey ("Continuous.Server.FullScreenControlPad.X");
 			var y = defs.FloatForKey ("Continuous.Server.FullScreenControlPad.Y");
-			Frame = MoveRectIntoBounds (new CGRect (new CGPoint(x, y), defaultSize));
+			Frame = MoveRectIntoBounds (new CGRect (new CGPoint (x, y), defaultSize));
 		}
 
 		void SaveXY ()
