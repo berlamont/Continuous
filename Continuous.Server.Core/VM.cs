@@ -4,6 +4,7 @@ using Mono.CSharp;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Continuous.Server
 {
@@ -15,7 +16,6 @@ namespace Continuous.Server
 	{
 		readonly object mutex = new object ();
 		readonly Printer printer = new Printer ();
-
 		Evaluator eval;
 
 		public EvalResult Eval (EvalRequest code, TaskScheduler mainScheduler, CancellationToken token)
@@ -43,21 +43,26 @@ namespace Continuous.Server
 
 				sw.Start ();
 
-				try {
-					if (!string.IsNullOrEmpty (code.Declarations)) {
-						eval.Evaluate (code.Declarations, out result, out hasResult);
-					}
-					if (!string.IsNullOrEmpty (code.ValueExpression)) {
-						eval.Evaluate (code.ValueExpression, out result, out hasResult);
-					}
-				} catch (InternalErrorException) {
-					eval = null; // Force re-init
-				} catch (Exception ex) {
-					// Sometimes Mono.CSharp fails when constructing failure messages
-					if (ex.StackTrace.Contains ("Mono.CSharp.InternalErrorException")) {
+				if (code.Xaml != null && code.XamlType != null) {
+					result = LoadXAML (code.Xaml, code.XamlType);
+					hasResult = result != null;
+				} else {
+					try {
+						if (!string.IsNullOrEmpty (code.Declarations)) {
+							eval.Evaluate (code.Declarations, out result, out hasResult);
+						}
+						if (!string.IsNullOrEmpty (code.ValueExpression)) {
+							eval.Evaluate (code.ValueExpression, out result, out hasResult);
+						}
+					} catch (InternalErrorException) {
 						eval = null; // Force re-init
+					} catch (Exception ex) {
+						// Sometimes Mono.CSharp fails when constructing failure messages
+						if (ex.StackTrace.Contains ("Mono.CSharp.InternalErrorException")) {
+							eval = null; // Force re-init
+						}
+						printer.AddError (ex);
 					}
-					printer.AddError (ex);
 				}
 
 				sw.Stop ();
@@ -113,6 +118,32 @@ namespace Continuous.Server
 		partial void PlatformSettings (CompilerSettings settings);
 
 		partial void PlatformInit ();
+
+		object LoadXAML (string xaml, string xamlType)
+		{
+			Log ($"Loading XAML for type  {xamlType}");
+			object view = null;
+			try {
+				view = eval.Evaluate ($"new {xamlType} ()");
+			} catch (Exception ex) {
+				Log ($"Error create new instance of {xamlType}");
+				printer.AddError (ex);
+				return null;
+			}
+			try {
+				var asms = AppDomain.CurrentDomain.GetAssemblies ();
+				var xamlAssembly = Assembly.Load (new AssemblyName ("Xamarin.Forms.Xaml"));
+				var xamlLoader = xamlAssembly.GetType ("Xamarin.Forms.Xaml.XamlLoader");
+				var load = xamlLoader.GetRuntimeMethod ("Load", new[] { typeof (object), typeof (string) });
+				load.Invoke (null, new object[] { view, xaml });
+				return view;
+			} catch (TargetInvocationException ex) {
+				Log ($"Error loading xaml: {ex.Message}");
+				printer.AddError (ex);
+			}
+			Log ($"XAML loaded correctly for view {view}");
+			return null;
+		}
 
 		void AddReference (Assembly a)
 		{

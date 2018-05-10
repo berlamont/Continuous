@@ -16,6 +16,8 @@ namespace Continuous
 	{
 		public string Declarations;
 		public string ValueExpression;
+		public string Xaml;
+		public string XamlType;
 	}
 
 	public class EvalMessage
@@ -32,6 +34,7 @@ namespace Continuous
 		public TimeSpan Duration;
 		public object Result;
 		public bool HasResult;
+		public string Xaml;
 
 		public bool HasErrors {
 			get { return Messages != null && Messages.Any (m => m.MessageType == "error"); }

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.IO;
 
 #if MONODEVELOP
 using MonoDevelop.Ide;
@@ -126,15 +129,19 @@ namespace Continuous.Client
 			}
 		}
 
-		class XamlTypeDecl : TypeDecl
+		public class XamlTypeDecl : TypeDecl
 		{
-			public string XamlText;
-			public override string Name {
-				get {
-					Console.WriteLine ("XAML TYPE GET NAME");
-					return "??";
-				}
+			string typeName;
+
+			public XamlTypeDecl (string typeName = "??")
+			{
+				this.typeName = typeName;
 			}
+
+			public string XamlText;
+
+			public override string Name => typeName;
+
 			public override TextLoc StartLocation {
 				get {
 					return new TextLoc (TextLoc.MinLine, TextLoc.MinColumn);
@@ -185,8 +192,24 @@ namespace Continuous.Client
 
 			if (ext == ".xaml") {
 				var xaml = doc.Editor.Text;
+				string typeName = null;
+				try {
+					using (var stream = new StringReader (xaml)) {
+						var reader = XmlReader.Create (stream);
+						var xdoc = XDocument.Load (reader);
+						XNamespace x = "http://schemas.microsoft.com/winfx/2009/xaml";
+						var classAttribute = xdoc.Root.Attribute (x + "Class");
+						typeName = classAttribute.Value;
+						CleanAutomationIds (xdoc.Root);
+						xaml = xdoc.ToString ();
+					}
+				} catch (Exception ex) {
+					Log (ex);
+					return new TypeDecl[0];
+				}
+
 				return new TypeDecl[] {
-					new XamlTypeDecl {
+					new XamlTypeDecl (typeName) {
 						Document = new DocumentRef (doc.FileName.FullPath),
 						XamlText = xaml,
 					},
@@ -223,10 +246,12 @@ namespace Continuous.Client
 			}
 			if (boundDoc != null) {
 				boundDoc.DocumentParsed -= ActiveDoc_DocumentParsed;
+				boundDoc.AnalysisDocumentChanged -= ActiveDoc_DocumentChanged;
 			}
 			boundDoc = doc;
 			if (boundDoc != null) {
 				boundDoc.DocumentParsed += ActiveDoc_DocumentParsed;
+				boundDoc.AnalysisDocumentChanged += ActiveDoc_DocumentChanged;
 			}
 		}
 
@@ -235,6 +260,15 @@ namespace Continuous.Client
 			var doc = IdeApp.Workbench.ActiveDocument;
 			Log ("DOC PARSED {0}", doc.Name);
 			await SetTypesAndVisualizeMonitoredTypeAsync (forceEval: false, showError: false);
+		}
+
+		async void ActiveDoc_DocumentChanged (object sender, EventArgs e)
+		{
+			var doc = IdeApp.Workbench.ActiveDocument;
+			if (doc.FileName.Extension == ".xaml") {
+				Log ("DOC XAML CHANGED {0}", doc.Name);
+				await SetTypesAndVisualizeMonitoredTypeAsync (forceEval: true, showError: false);
+			};
 		}
 
 		protected override async Task<string> GetSelectedTextAsync ()
@@ -246,6 +280,14 @@ namespace Continuous.Client
 			}
 
 			return "";
+		}
+
+		void CleanAutomationIds (XElement xdoc)
+		{
+			xdoc.SetAttributeValue ("AutomationId", null);
+			foreach (var el in xdoc.Elements ()) {
+				CleanAutomationIds (el);
+			}
 		}
 	}
 
@@ -323,6 +365,7 @@ namespace Continuous.Client
 		{
 			return SyntaxFactory.ParseStatement ($"try {{ Continuous.Server.WatchStore.Record(\"{id}\", {expr}); }} catch {{ }}");
 		}
+
 	}
 }
 #endif

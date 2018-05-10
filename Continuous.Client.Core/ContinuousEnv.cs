@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Diagnostics;
 using System.Collections.Generic;
+using static Continuous.Client.MonoDevelopContinuousEnv;
 
 namespace Continuous.Client
 {
@@ -84,10 +85,11 @@ namespace Continuous.Client
 			}
 		}
 
-		protected async Task<EvalResponse> EvalForResponseAsync (string declarations, string valueExpression, bool showError)
+		protected async Task<EvalResponse> EvalForResponseAsync (string declarations, string valueExpression, string xaml,
+																 string xamlType, bool showError)
 		{
 			Connect ();
-			var r = await conn.VisualizeAsync (declarations, valueExpression);
+			var r = await conn.VisualizeAsync (declarations, valueExpression, xaml, xamlType);
 			var err = r.HasErrors;
 			if (err) {
 				var message = string.Join ("\n", r.Messages.Select (m => m.MessageType + ": " + m.Text));
@@ -125,15 +127,21 @@ namespace Continuous.Client
 
 		protected async Task SetTypesAndVisualizeMonitoredTypeAsync (bool forceEval, bool showError)
 		{
+			string xaml = null;
+			string xamlType = null;
 			//
 			// Gobble up all we can about the types in the active document
 			//
 			var typeDecls = await GetTopLevelTypeDeclsAsync ();
 			foreach (var td in typeDecls) {
 				td.SetTypeCode ();
+				if (td is XamlTypeDecl xamlTypeDecl) {
+					xaml = xamlTypeDecl.XamlText;
+					xamlType = xamlTypeDecl.Name;
+				}
 			}
 
-			await VisualizeMonitoredTypeAsync (forceEval, showError);
+			await VisualizeMonitoredTypeAsync (forceEval, showError, xaml, xamlType);
 		}
 
 		bool monitoring = false;
@@ -168,7 +176,7 @@ namespace Continuous.Client
 
 		LinkedCode lastLinkedCode = null;
 
-		public async Task VisualizeMonitoredTypeAsync (bool forceEval, bool showError)
+		public async Task VisualizeMonitoredTypeAsync (bool forceEval, bool showError, string xaml = null, string xamlType = null)
 		{
 			//
 			// Refresh the monitored type
@@ -194,7 +202,7 @@ namespace Continuous.Client
 				// Declare and Show it
 				//
 				Log (code.ValueExpression);
-				var resp = await EvalForResponseAsync (code.Declarations, code.ValueExpression, showError);
+				var resp = await EvalForResponseAsync (code.Declarations, code.ValueExpression, xaml, xamlType, showError);
 				if (resp.HasErrors)
 					return;
 

@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Mono.CSharp" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <Import Project="..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.targets" Condition="Exists('..\packages\MonoDevelop.Addins.0.4.4\build\MonoDevelop.Addins.targets')" />
 </Project>
