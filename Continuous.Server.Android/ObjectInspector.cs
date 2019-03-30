@@ -74,7 +74,7 @@ namespace Continuous.Server
 
 		public static void SetKeyedObject (string key, object obj)
 		{
-			keyedObjects [key] = obj;
+			keyedObjects[key] = obj;
 		}
 
 		public static object GetKeyedObject (string key)

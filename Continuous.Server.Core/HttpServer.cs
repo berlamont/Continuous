@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace Continuous.Server
 {
-	public class HttpServer
+	public partial class HttpServer
 	{
 		readonly int port;
 		readonly Visualizer visualizer;
@@ -17,12 +17,15 @@ namespace Continuous.Server
 		HttpListener listener;
 		TaskScheduler mainScheduler;
 
-		readonly VM vm = new VM ();
+		readonly IVM vm;
+		readonly DiscoveryBroadcaster broadcaster;
 
-		public HttpServer (object context = null, int port = Http.DefaultPort)
+		public HttpServer (object context = null, int port = Http.DefaultPort, IVM vm = null, Visualizer visualizer = null, bool discoverable = true)
 		{
 			this.port = port;
-			visualizer = new Visualizer (context);
+			this.visualizer = visualizer ?? new Visualizer (context);
+			this.vm = vm ?? (new VM ());
+			this.broadcaster = discoverable ? new DiscoveryBroadcaster () : null;
 		}
 
 		public void Run ()
@@ -30,20 +33,41 @@ namespace Continuous.Server
 			mainScheduler = TaskScheduler.FromCurrentSynchronizationContext ();
 
 			Task.Run (() => {
-				listener = new HttpListener ();
-				listener.Prefixes.Add ("http://127.0.0.1:" + port + "/");
-				listener.Start ();
+				var url = "http://+:" + port + "/";
+
+				var remTries = 2;
+
+				while (remTries > 0) {
+					remTries--;
+
+					listener = new HttpListener ();
+					listener.Prefixes.Add (url);
+
+					try {
+						listener.Start ();
+						remTries = 0;
+					} catch (HttpListenerException ex) {
+						if (remTries == 1 && ex.ErrorCode == 5) { // Access Denied
+							GrantServerPermission (url);
+						} else {
+							throw;
+						}
+					}
+				}
+
 				Loop ();
 			});
 		}
 
+		partial void GrantServerPermission (string url);
+
 		// Analysis disable once FunctionNeverReturns
 		async void Loop ()
 		{
-			for (;;) {
+			for (; ; ) {
 				var c = await listener.GetContextAsync ().ConfigureAwait (false);
 				try {
-					HandleRequest (c);					
+					HandleRequest (c);
 				} catch (Exception ex) {
 					Log (ex, "HandleRequest");
 				}
@@ -76,27 +100,28 @@ namespace Continuous.Server
 					} catch (Exception ex) {
 						Log (ex, "/stopVisualizing");
 					}
-				}
-				else {
+				} else {
 					var reqStr = await new StreamReader (c.Request.InputStream, Encoding.UTF8).ReadToEndAsync ().ConfigureAwait (false);
 
-//					Log (reqStr);
+					//					Log (reqStr);
 
 					var req = JsonConvert.DeserializeObject<EvalRequest> (reqStr);
+
+					var token = CancellationToken.None;
 
 					var resp = await Task.Factory.StartNew (() => {
 						WatchStore.Clear ();
 						var r = new EvalResult ();
 						try {
-							r = vm.Eval (req.Code);
-						}
-						catch (Exception ex) {
+							r = vm.Eval (req, mainScheduler, token);
+						} catch (Exception ex) {
 							Log (ex, "vm.Eval");
 						}
 						try {
-							Visualize (r);
-						}
-						catch (Exception ex) {
+							Task.Factory.StartNew (() => {
+								Visualize (r);
+							}, token, TaskCreationOptions.None, mainScheduler).Wait ();
+						} catch (Exception ex) {
 							Log (ex, "Visualize");
 						}
 						var response = new EvalResponse {
@@ -105,7 +130,7 @@ namespace Continuous.Server
 							Duration = r.Duration,
 						};
 						return Tuple.Create (r, JsonConvert.SerializeObject (response));
-					}, CancellationToken.None, TaskCreationOptions.None, mainScheduler);
+					}, token);
 
 					Log (resp.Item2);
 
@@ -156,8 +181,8 @@ namespace Continuous.Server
 			}
 			try {
 				Log ("Continuous.Visualize: {0}", res.Result);
-			// Analysis disable once EmptyGeneralCatchClause
-			} catch (Exception) {				
+				// Analysis disable once EmptyGeneralCatchClause
+			} catch (Exception) {
 			}
 			visualizer.Visualize (res);
 		}
@@ -175,9 +200,9 @@ namespace Continuous.Server
 
 		void Log (string msg)
 		{
-			#if DEBUG
+#if DEBUG
 			Console.WriteLine (msg);
-			#endif
+#endif
 		}
 	}
 }

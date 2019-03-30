@@ -4,11 +4,11 @@ using System.Collections.Generic;
 namespace Continuous.Server
 {
 	public static class WatchStore
-	{		
+	{
 		const int MaxValuesPerVariable = 32;
 		static readonly Dictionary<string, List<string>> watchValues = new Dictionary<string, List<string>> ();
 
-		public static event EventHandler Recorded = delegate{};
+		public static event EventHandler Recorded = delegate { };
 
 		public static void Clear ()
 		{
@@ -34,7 +34,7 @@ namespace Continuous.Server
 				}
 
 				vals.Add (GetString (value));
-				if (vals.Count > 2*MaxValuesPerVariable) {
+				if (vals.Count > 2 * MaxValuesPerVariable) {
 					vals.RemoveRange (0, MaxValuesPerVariable);
 				}
 

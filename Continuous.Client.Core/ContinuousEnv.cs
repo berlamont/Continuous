@@ -3,126 +3,119 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Diagnostics;
 using System.Collections.Generic;
-
-#if MONODEVELOP
-using MonoDevelop.Ide;
-using MonoDevelop.Ide.Gui;
-using MonoDevelop.Projects;
-using MonoDevelop.Refactoring;
-using Gtk;
-using ICSharpCode.NRefactory;
-using ICSharpCode.NRefactory.CSharp;
-using ICSharpCode.NRefactory.CSharp.Resolver;
-#endif
+using static Continuous.Client.MonoDevelopContinuousEnv;
 
 namespace Continuous.Client
 {
-	public class ContinuousEnv
+	public abstract partial class ContinuousEnv
 	{
-		public static readonly ContinuousEnv Shared = new ContinuousEnv ();
+		public static ContinuousEnv Shared;
+
+		static ContinuousEnv ()
+		{
+			SetSharedPlatformEnvImpl ();
+		}
+
+		public ContinuousEnv ()
+		{
+			IP = Http.DefaultHost;
+			Port = Http.DefaultPort;
+		}
+
+		static partial void SetSharedPlatformEnvImpl ();
+
+		public readonly DiscoveryReceiver Discovery = new DiscoveryReceiver ();
 
 		public string MonitorTypeName = "";
 
 		HttpClient conn = null;
 		void Connect ()
 		{
-			if (conn == null) {
+			if (conn == null || conn.BaseUrl != ServerUrl) {
 				conn = CreateConnection ();
 			}
 		}
 
-		static HttpClient CreateConnection ()
-		{
-			return new HttpClient (new Uri ("http://127.0.0.1:" + Http.DefaultPort));
+		public string IP { get; set; }
+		public int Port { get; set; }
+
+		Uri ServerUrl {
+			get {
+				return new Uri ("http://" + Discovery.Resolve (IP.Trim ()) + ":" + Port);
+			}
 		}
 
-		public void Alert (string format, params object[] args)
+		protected HttpClient CreateConnection ()
+		{
+			return new HttpClient (ServerUrl);
+		}
+
+		public event Action<string> Failure;
+		public event Action<string> Success;
+
+		public void Succeed (string format, params object[] args)
+		{
+			OnSucceed (format, args);
+		}
+
+		protected virtual void OnSucceed (string format, params object[] args)
 		{
 			Log (format, args);
-			#if MONODEVELOP
-			var parentWindow = IdeApp.Workbench.RootWindow;
-			var dialog = new MessageDialog(parentWindow, DialogFlags.DestroyWithParent,
-				MessageType.Info, ButtonsType.Ok,
-				false,
-				format, args);
-			dialog.Run ();
-			dialog.Destroy ();
-			#endif
+
+			var a = Success;
+			if (a != null) {
+				var m = string.Format (System.Globalization.CultureInfo.CurrentUICulture, format, args);
+				a (m);
+			}
 		}
 
-		async Task<bool> EvalAsync (string code, bool showError)
+		public void Fail (string format, params object[] args)
 		{
-			var r = await EvalForResponseAsync (code, showError);
-			var err = r.HasErrors;
-			return !err;
+			OnFail (format, args);
 		}
 
-		async Task<EvalResponse> EvalForResponseAsync (string code, bool showError)
+		protected virtual void OnFail (string format, params object[] args)
+		{
+			Log (format, args);
+
+			var a = Failure;
+			if (a != null) {
+				var m = string.Format (System.Globalization.CultureInfo.CurrentUICulture, format, args);
+				a (m);
+			}
+		}
+
+		protected async Task<EvalResponse> EvalForResponseAsync (string declarations, string valueExpression, string xaml,
+																 string xamlType, bool showError)
 		{
 			Connect ();
-			var r = await conn.VisualizeAsync (code);
+			var r = await conn.VisualizeAsync (declarations, valueExpression, xaml, xamlType);
 			var err = r.HasErrors;
 			if (err) {
 				var message = string.Join ("\n", r.Messages.Select (m => m.MessageType + ": " + m.Text));
 				if (showError) {
-					Alert ("{0}", message);
+					Fail ("{0}", message);
+				}
+			} else {
+				if (r.WatchValues.ContainsKey (valueExpression)) {
+					Succeed ("{0} = {1}", valueExpression, r.WatchValues[valueExpression]);
+				} else {
+					Succeed ("{0}", valueExpression);
 				}
 			}
 			return r;
 		}
 
-		public async Task StopVisualizingAsync ()
-		{
-			MonitorTypeName = "";
-			TypeCode.Clear ();
-			try {
-				Connect ();
-				await conn.StopVisualizingAsync ();
-			} catch (Exception ex) {
-				Log ("ERROR: {0}", ex);
-			}
-		}
-
-		public event Action<LinkedCode> LinkedMonitoredCode = delegate {};
-
-		#if MONODEVELOP
-		async Task MonitorWatchChanges ()
-		{
-			var version = 0L;
-			var conn = CreateConnection ();
-			for (;;) {
-				try {
-//					Console.WriteLine ("MON WATCH " + DateTime.Now);
-					var res = await conn.WatchChangesAsync (version);
-					if (res != null) {
-						version = res.Version;
-						await UpdateEditorWatchesAsync (res);
-					}
-					else {
-						await Task.Delay (1000);
-					}
-				} catch (Exception ex) {
-					Console.WriteLine (ex);
-					await Task.Delay (3000);
-				}
-			}
-		}
-
 		public async Task VisualizeAsync ()
 		{
-			var doc = IdeApp.Workbench.ActiveDocument;
+			var typedecl = await FindTypeAtCursorAsync ();
 
-			if (doc == null)
-				return;
-
-			var typedecl = await FindTypeAtCursor ();
-
-			if (typedecl == null) {				
-				Alert ("Could not find a type at the cursor.");
+			if (typedecl == null) {
+				Fail ("Could not find a type at the cursor.");
 				return;
 			}
 
-			StartMonitoring ();
+			EnsureMonitoring ();
 
 			var typeName = typedecl.Name;
 
@@ -132,22 +125,58 @@ namespace Continuous.Client
 			await SetTypesAndVisualizeMonitoredTypeAsync (forceEval: true, showError: true);
 		}
 
-		LinkedCode lastLinkedCode = null;
-
-		async Task SetTypesAndVisualizeMonitoredTypeAsync (bool forceEval, bool showError)
+		protected async Task SetTypesAndVisualizeMonitoredTypeAsync (bool forceEval, bool showError)
 		{
+			string xaml = null;
+			string xamlType = null;
 			//
 			// Gobble up all we can about the types in the active document
 			//
 			var typeDecls = await GetTopLevelTypeDeclsAsync ();
 			foreach (var td in typeDecls) {
 				td.SetTypeCode ();
+				if (td is XamlTypeDecl xamlTypeDecl) {
+					xaml = xamlTypeDecl.XamlText;
+					xamlType = xamlTypeDecl.Name;
+				}
 			}
 
-			await VisualizeMonitoredTypeAsync (forceEval, showError);
+			await VisualizeMonitoredTypeAsync (forceEval, showError, xaml, xamlType);
 		}
 
-		public async Task VisualizeMonitoredTypeAsync (bool forceEval, bool showError)
+		bool monitoring = false;
+		void EnsureMonitoring ()
+		{
+			if (monitoring) return;
+
+			MonitorEditorChanges ();
+			MonitorWatchChanges ();
+
+			monitoring = true;
+		}
+
+		protected abstract void MonitorEditorChanges ();
+
+		protected abstract Task<TypeDecl[]> GetTopLevelTypeDeclsAsync ();
+
+		async Task<TypeDecl> FindTypeAtCursorAsync ()
+		{
+			var editLoc = await GetCursorLocationAsync ();
+			if (!editLoc.HasValue)
+				return null;
+			var editTLoc = editLoc.Value;
+
+			var selTypeDecl =
+				(await GetTopLevelTypeDeclsAsync ()).
+				FirstOrDefault (x => x.StartLocation <= editTLoc && editTLoc <= x.EndLocation);
+			return selTypeDecl;
+		}
+
+		protected abstract Task<TextLoc?> GetCursorLocationAsync ();
+
+		LinkedCode lastLinkedCode = null;
+
+		public async Task VisualizeMonitoredTypeAsync (bool forceEval, bool showError, string xaml = null, string xamlType = null)
 		{
 			//
 			// Refresh the monitored type
@@ -159,7 +188,7 @@ namespace Continuous.Client
 
 			var code = await Task.Run (() => monitorTC.GetLinkedCode ());
 
-			LinkedMonitoredCode (code);
+			OnLinkedMonitoredCode (code);
 
 			if (!forceEval && lastLinkedCode != null && lastLinkedCode.CacheKey == code.CacheKey) {
 				return;
@@ -170,16 +199,10 @@ namespace Continuous.Client
 			//
 			try {
 				//
-				// Declare it
-				//
-				Log (code.Declarations);
-				if (!await EvalAsync (code.Declarations, showError)) return;
-
-				//
-				// Show it
+				// Declare and Show it
 				//
 				Log (code.ValueExpression);
-				var resp = await EvalForResponseAsync (code.ValueExpression, showError);
+				var resp = await EvalForResponseAsync (code.Declarations, code.ValueExpression, xaml, xamlType, showError);
 				if (resp.HasErrors)
 					return;
 
@@ -196,8 +219,20 @@ namespace Continuous.Client
 
 			} catch (Exception ex) {
 				if (showError) {
-					Alert ("Could not communicate with the app.\n\n{0}: {1}", ex.GetType (), ex.Message);
+					Fail ("Could not communicate with the app.\n\n{0}: {1}", ex.GetType (), ex.Message);
 				}
+			}
+		}
+
+		public async Task StopVisualizingAsync ()
+		{
+			MonitorTypeName = "";
+			TypeCode.Clear ();
+			try {
+				Connect ();
+				await conn.StopVisualizingAsync ();
+			} catch (Exception ex) {
+				Log ("ERROR: {0}", ex);
 			}
 		}
 
@@ -217,20 +252,19 @@ namespace Continuous.Client
 		{
 			var ws = watches.ToList ();
 			foreach (var w in ws) {
-				var wd = IdeApp.Workbench.GetDocument (w.FilePath);
-				if (wd == null)
-					continue;
 				List<string> vals;
 				if (!watchValues.TryGetValue (w.Id, out vals)) {
 					vals = new List<string> ();
 				}
-//				Console.WriteLine ("VAL {0} {1} = {2}", w.Id, w.Expression, vals);
-				SetWatchText (w, vals, wd);
+				//				Console.WriteLine ("VAL {0} {1} = {2}", w.Id, w.Expression, vals);
+				await SetWatchTextAsync (w, vals);
 			}
 			lastWatches = ws;
 		}
 
-		string GetValsText (List<string> vals)
+		protected abstract Task SetWatchTextAsync (WatchVariable w, List<string> vals);
+
+		protected string GetValsText (List<string> vals)
 		{
 			var maxLength = 72;
 			var newText = string.Join (", ", vals);
@@ -241,224 +275,59 @@ namespace Continuous.Client
 			return newText;
 		}
 
-		void SetWatchText (WatchVariable w, List<string> vals, Document doc)
+		async void MonitorWatchChanges ()
 		{
-			var ed = doc.Editor;
-			if (ed == null || !ed.CanEdit (w.FileLine))
-				return;
-			var line = ed.GetLine (w.FileLine);
-			if (line == null)
-				return;
-			var newText = "//" + w.ExplicitExpression + "= " + GetValsText (vals);
-			var lineText = ed.GetLineText (w.FileLine);
-			var commentIndex = lineText.IndexOf ("//");
-			if (commentIndex < 0)
-				return;
-			var commentCol = commentIndex + 1;
-			if (commentCol != w.FileColumn)
-				return;
-
-			var existingText = lineText.Substring (commentIndex);
-
-			if (existingText != newText) {
-				var offset = line.Offset + commentIndex;
-				var remLen = line.Length - commentIndex;
-				ed.Remove (offset, remLen);
-				ed.Insert (offset, newText);
-			}
-		}
-
-		abstract class TypeDecl
-		{
-			public DocumentRef Document { get; set; }
-			public abstract string Name { get; }
-			public abstract TextLocation StartLocation { get; }
-			public abstract TextLocation EndLocation { get; }
-			public abstract void SetTypeCode ();
-		}
-
-		class CSharpTypeDecl : TypeDecl
-		{
-			public TypeDeclaration Declaration;
-			public CSharpAstResolver Resolver;
-			public override string Name {
-				get {
-					return Declaration.Name;
-				}
-			}
-			public override TextLocation StartLocation {
-				get {
-					return Declaration.StartLocation;
-				}
-			}
-			public override TextLocation EndLocation {
-				get {
-					return Declaration.EndLocation;
-				}
-			}
-			public override void SetTypeCode ()
-			{
-				TypeCode.Set (Document, Declaration, Resolver);
-			}
-		}
-
-		class XamlTypeDecl : TypeDecl
-		{
-			public string XamlText;
-			public override string Name {
-				get {
-					Console.WriteLine ("XAML TYPE GET NAME");
-					return "??";
-				}
-			}
-			public override TextLocation StartLocation {
-				get {
-					return new TextLocation (TextLocation.MinLine, TextLocation.MinColumn);
-				}
-			}
-			public override TextLocation EndLocation {
-				get {
-					return new TextLocation (1000000, TextLocation.MinColumn);
-				}
-			}
-			public override void SetTypeCode ()
-			{
-				Console.WriteLine ("SET XAML TYPE CODE");
-			}
-		}
-
-		async Task<TypeDecl[]> GetTopLevelTypeDeclsAsync ()
-		{
-			var doc = IdeApp.Workbench.ActiveDocument;
-			Log ("Doc = {0}", doc);
-			if (doc == null) {
-				return new TypeDecl[0];
-			}
-
-			var ext = doc.FileName.Extension;
-
-			if (ext == ".cs") {
-				try {					
-					var resolver = await doc.GetSharedResolver ();
-					var typeDecls =
-						resolver.RootNode.Descendants.
-						OfType<TypeDeclaration> ().
-						Where (x => !(x.Parent is TypeDeclaration)).
-						Select (x => new CSharpTypeDecl {
-							Document = new DocumentRef (doc.FileName.FullPath),
-							Declaration = x,
-							Resolver = resolver,
-						});
-					return typeDecls.ToArray ();
-				} catch (Exception ex) {
-					Log (ex);
-					return new TypeDecl[0];
-				}
-			}
-
-			if (ext == ".xaml") {
-				var xaml = doc.Editor.Text;
-				return new TypeDecl[] {
-					new XamlTypeDecl {
-						Document = new DocumentRef (doc.FileName.FullPath),
-						XamlText = xaml,
-					},
-				};
-			}
-
-			return new TypeDecl[0];
-		}
-
-		async Task<TypeDecl> FindTypeAtCursor ()
-		{
-			var doc = IdeApp.Workbench.ActiveDocument;
-			if (doc == null) {
-				return null;
-			}
-
-			var editLoc = doc.Editor.Caret.Location;
-			var editTLoc = new TextLocation (editLoc.Line, editLoc.Column);
-
-			var selTypeDecl =
-				(await GetTopLevelTypeDeclsAsync ()).
-				FirstOrDefault (x => x.StartLocation <= editTLoc && editTLoc <= x.EndLocation);
-			return selTypeDecl;
-		}
-
-		bool monitoring = false;
-		void StartMonitoring ()
-		{
-			if (monitoring) return;
-
-			IdeApp.Workbench.ActiveDocumentChanged += BindActiveDoc;
-			BindActiveDoc (this, EventArgs.Empty);
-
-			MonitorWatchChanges ();
-
-			monitoring = true;
-		}
-
-		MonoDevelop.Ide.Gui.Document boundDoc = null;
-
-		void BindActiveDoc (object sender, EventArgs e)
-		{
-			var doc = IdeApp.Workbench.ActiveDocument;
-			if (boundDoc == doc) {
-				return;
-			}
-			if (boundDoc != null) {				
-				boundDoc.DocumentParsed -= ActiveDoc_DocumentParsed;
-			}
-			boundDoc = doc;
-			if (boundDoc != null) {
-				boundDoc.DocumentParsed += ActiveDoc_DocumentParsed;
-			}
-		}
-
-		async void ActiveDoc_DocumentParsed (object sender, EventArgs e)
-		{
-			var doc = IdeApp.Workbench.ActiveDocument;
-			Log ("DOC PARSED {0}", doc.Name);
-			await SetTypesAndVisualizeMonitoredTypeAsync (forceEval: false, showError: false);
-		}
-
-		public async Task VisualizeSelectionAsync ()
-		{
-			var doc = IdeApp.Workbench.ActiveDocument;
-
-			if (doc != null) {
-				var code = doc.Editor.SelectedText;
-
+			var version = 0L;
+			var conn = CreateConnection ();
+			for (; ; ) {
 				try {
-					await EvalAsync (code, showError: true);
+					//					Console.WriteLine ("MON WATCH " + DateTime.Now);
+					var res = await conn.WatchChangesAsync (version);
+					if (res != null) {
+						version = res.Version;
+						await UpdateEditorWatchesAsync (res);
+					} else {
+						await Task.Delay (1000);
+					}
 				} catch (Exception ex) {
-					Alert ("Could not communicate with the app.\n\n{0}: {1}", ex.GetType (), ex.Message);
+					Console.WriteLine (ex);
+					await Task.Delay (3000);
 				}
 			}
 		}
 
-		#endif
+
+
+		public event Action<LinkedCode> LinkedMonitoredCode = delegate { };
+
+		protected void OnLinkedMonitoredCode (LinkedCode code)
+		{
+			LinkedMonitoredCode (code);
+		}
+
+		protected abstract Task<string> GetSelectedTextAsync ();
 
 		protected void Log (string format, params object[] args)
 		{
-			#if DEBUG
+#if DEBUG
 			Log (string.Format (format, args));
-			#endif
+#endif
 		}
 
 		protected void Log (string msg)
 		{
-			#if DEBUG
+#if DEBUG
 			Console.WriteLine (msg);
-			#endif
+#endif
 		}
 
 		protected void Log (Exception ex)
 		{
-			#if DEBUG
+#if DEBUG
 			Console.WriteLine (ex.ToString ());
-			#endif
+#endif
 		}
 	}
+
 }
 
